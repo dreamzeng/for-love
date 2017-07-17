@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="Content-type" content="text/html; charset=utf-8" />
+    <title>为了遇见你 --- LOVE</title>
+    <script src="js/jquery-1.8.2.min.js"></script>
+    <script type="text/javascript" src="js/tran.js"></script>
+    <link rel='stylesheet' href='css/css.css' />
+</head>
+<body>
+    <div id='content'>
+        <!-- 
+            主题元素
+            这里实现 页面的切换主要是 通过 改变 父元素的 x 轴来实现 用 css3 transform
+        -->
+        <ul class='content-wrap'>
+            <!-- 第一副画面 -->
+            <li>
+                <div class="a_background">
+                    <div class="a_background_top"></div>
+                    <div class="a_background_middle"></div>
+                    <div class="a_background_botton"></div>
+                </div>
+                <!-- 云 -->
+                <div class="cloudArea">
+                    <div class="cloud cloud1"></div>
+                    <div class="cloud cloud2"></div>
+                </div>
+                <!-- 太阳 -->
+                <div id="sun"></div>
+            </li>
+            <!-- 第二副画面 -->
+            <li> 
+                <!-- 背景图 -->
+                <div class="b_background"></div>
+                <div class="b_background_preload"></div>
+                <!-- 商店 -->
+                <div class="shop">
+                    <div class="door">
+                        <div class="door-left"></div>
+                        <div class="door-right"></div>
+                    </div>
+                </div>
+                 <!-- 鸟 -->
+                <div class="bird"></div>
+             </li>
+            <!-- 第三副画面 -->
+            <li>
+                <!-- 背景图 -->
+                <div class="c_background">
+                    <div class="c_background_top"></div>
+                    <div class="c_background_middle"></div>
+                    <div class="c_background_botton"></div>
+                </div>
+                <!-- 小女孩 -->
+                <div class="girl"></div>
+                <!-- 水波 -->
+                <div class="bridge-bottom">
+                    <div class="water">
+                        <div id="water1" class="water_1"></div>
+                        <div id="water2" class="water_2"></div>
+                        <div id="water3" class="water_3"></div>
+                        <div id="water4" class="water_4"></div>
+                    </div>
+                </div>
+                <!-- 星星 -->
+                <ul class="stars">
+                    <li class="stars1"></li>
+                    <li class="stars2"></li>
+                    <li class="stars3"></li>
+                    <li class="stars4"></li>
+                    <li class="stars5"></li>
+                    <li class="stars6"></li>
+                </ul>
+            </li>
+        </ul>
+        <!--
+            小孩男走路是贯穿三个主题页面，
+            因此小男孩在布局上不能嵌入任何一个页面内，
+            否则无法切换到下一个页面中了。
+            所以最终小男孩的布局与页面根节点属于并列结构。
+
+            小男孩其实只会在当前页面移动，所以是相对父级#content的范围
+            小男孩的布局处理，因为小孩男是合成的"雪碧图"，通过坐标取图，
+            因此不能用CSS处理自适应布局了，需要动态调整、采用动画的元素需要设置绝对定位
+        -->
+         <div id="boy" class="charector slowWalk"></div>
+         <!-- 飘花 -->
+        <div id="snowflake"></div>
+    </div>
+    <script type="text/javascript" src="js/script.js"></script>
+    <script type="text/javascript">
+       $(function() {
+    
+        var container = $("#content");
+        var swipe = Swipe(container);
+        var visualWidth = container.width();
+        var visualHeight = container.height();
+        // 页面滚动到指定的位置
+        function scrollTo(time, proportionX) {
+            var distX = container.width() * proportionX;
+            swipe.scrollTo(distX, time);
+        }
+        
+        ////////////////////////////////////////////////////////
+        //=================== 动画处理 ====================== //
+        ////////////////////////////////////////////////////////
+
+        // 太阳公转
+        $("#sun").addClass('rotation');
+         // 飘云
+        $(".cloud:first").addClass('cloud1Anim');
+        $(".cloud:last").addClass('cloud2Anim');
+
+        //右边飞鸟
+        var bird = {
+            elem: $(".bird"),
+            fly: function() {
+                this.elem.addClass('birdFly')
+                this.elem.transition({
+                    right: container.width()
+                }, 15000, 'linear');
+            }
+        };
+
+
+        // 获取数据
+        var getValue = function(className) {
+            var $elem = $('' + className + '')
+            // 走路的路线坐标
+            return {
+                height: $elem.height(),
+                top: $elem.position().top
+            };
+        };
+
+        // 桥的Y轴
+        var bridgeY = function() {
+            var data = getValue('.c_background_middle');
+            return data.top;
+        }();
+
+        var girl = {
+            elem: $('.girl'),
+            getHeight: function() {
+                return this.elem.height();
+            },
+            // 转身动作
+            rotate: function() {
+                this.elem.addClass('girl-rotate');
+            },
+            setOffset: function() {
+                this.elem.css({
+                    left: visualWidth / 2,
+                    top: bridgeY - this.getHeight()
+                });
+            },
+            getOffset: function() {
+                return this.elem.offset();
+            },
+            getWidth: function() {
+                return this.elem.width();
+            }
+        };
+        /**
+            小女孩同样也是采用“雪碧图”处理的，因此不能采用自适应缩放，
+            位置也只能通过JS代码动态计算，
+            以桥为参考点，left是可视区中间点，top是桥上
+        */
+        // 修正小女孩位置
+        girl.setOffset();
+        
+        /**
+         *当小男孩走完第一段路的时候，调用页面接口让页面开始滚动，scrollTo
+         *之后通过boy.walkTo继续让小男孩走路，我们只需要给小男孩与页面设置同样的位置与时间
+         */
+        var boy = BoyWalk();
+        openAudio();
+        // 开始
+        // 开始第一次走路
+        boy.walkTo(2000, 0.2).then(function() {
+            // 第一次走路完成
+            // 开始页面滚动
+            scrollTo(12000, 1);
+        }).then(function() {
+            //第二次走
+            return boy.walkTo(12000, 0.5);
+        }).then(function() {
+            //第二次走路完成
+            //暂停走路
+            boy.stopWalk();
+        }).then(function() {
+            //开门
+            return openDoor();
+        })
+        .then(function() {
+            //开灯
+            lamp.bright();
+        })
+        .then(function() {
+            //进商店
+            return boy.toShop(2000);
+        })
+        .then(function() {
+            //取花
+            return boy.talkFlower();
+        })
+        .then(function() {
+            // 飞鸟
+            bird.fly();
+        })
+        .then(function() {
+            //出商店
+            return boy.outShop(2000);
+        })
+        .then(function(){
+            // 关门
+            return shutDoor();
+        })
+        .then(function() {
+            //灯暗
+            lamp.dark();
+        })
+        .then(function(){
+             scrollTo(12000, 2);
+        })
+        .then(function(){
+            boy.walkTo(12000, 0.15);
+        })
+        .then(function() {
+            // 第二次走路到桥上left,top
+            return boy.walkTo(1500, 0.25, (bridgeY - girl.getHeight()) / visualHeight);
+        })
+        .then(function() {
+            // 实际走路的比例
+            var proportionX = (girl.getOffset().left - boy.getWidth() + girl.getWidth() / 5) / visualWidth;
+            // 第三次桥上直走到小女孩面前
+            return boy.walkTo(1500, proportionX);
+        })
+        .then(function() {
+            // 图片还原原地停止状态
+            boy.resetOriginal();
+        })
+        .then(function() {
+            // 增加转身动作 
+            setTimeout(function() {
+                girl.rotate();
+                boy.rotate(function() {
+                    snowflake();
+                });
+            }, 1000);
+        });
+    });
+    </script>
+</body>
+</html>
